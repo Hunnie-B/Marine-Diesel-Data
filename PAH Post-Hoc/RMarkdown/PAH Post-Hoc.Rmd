@@ -1,0 +1,67 @@
+---
+title: "PAH Post-Hoc"
+author: "BH"
+date: "2023-05-23"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r uploading packages}
+
+library(rstatix)
+library(tidyverse)
+library(janitor)
+library(here)
+
+```
+
+
+```{r uploading datasets}
+
+first_test_data <- read_csv(here("data", "first_test_percentages_no_zeros.csv")) %>%
+  clean_names()
+
+second_test_data <- read_csv(here("data", "second_test.csv")) %>%
+  clean_names()
+
+third_test_data <- read_csv(here("data", "third_test.csv")) %>%
+  clean_names()
+
+```
+
+
+```{r Shapiro-Wilk Test of normality}
+
+shapiro.test(first_test_data$data)
+histogram <- first_test_data %>%
+  ggplot() +
+  geom_histogram(aes(x = first_test_data$data)) +
+  theme_minimal()
+
+histogram
+
+```
+
+
+```{r one-way ANOVA or Kruskal-Wallis Test}
+
+kruskal.test(second_test_data)
+
+```
+
+
+```{r Games-Howell or Dunn Test}
+
+dunn_test_results <- dunn_test(third_test_data, value~timepoint, p.adjust.method = "bonferroni") %>%
+  write_csv(here("Saved Files", "dunn_test_results.csv"))
+
+dunn_test_results
+
+```
+

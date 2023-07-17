@@ -1,0 +1,88 @@
+---
+title: "PAH Bar Charts"
+author: "BH"
+date: "2023-04-28"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r loading necessary packages}
+
+library(tidyverse)
+library(janitor)
+library(here)
+library(gt)
+library(broom) 
+library(fs)
+library(viridis)
+library(patchwork)
+
+```
+
+
+
+```{r loading and cleaning the dataset}
+
+pah_data <- read_csv(here("data", "tidy_pah_data.csv")) %>% #loading in csv. file dataset
+  pivot_longer(cols = c(Naph,	x2MNaph,	x1MNaph,	x16DMNaph,	Acy,	Ace,	x235TMNaph,	Fluor,	DBThio,	Phen,	Ant,	x2MDBThio,	x2MPhen,	x28DMDBThio,	x24DMPhen,	Pyr,	x126TMPhen,	x128TMPhen,	x1MFlant,	BePhen,	BaAnt,	Trip,	Chry,	x1MChry,	x6EChry,	BbFlant,	BkFlant,	BjFlant,	BeP,	BaP,	Perl,	DBahAnt,	I123cdPyr,	BghiPerl), names_to = "parameter", values_to = "measure") %>%
+  mutate(oil_concentration = as.character(oil_concentration))
+pah_data  
+
+```
+
+
+
+```{r setting up data for multiple stand alone plots}
+
+nested_data <- pah_data %>% #assigning the dataset to an object
+  group_by(oil_concentration, fertilized) %>% #grouping the data by 3 variables: site, sample depth and sample type
+  nest() #nesting the grouped data
+nested_data #calling the nested data
+
+```
+
+
+
+```{r creating the nested plots}
+
+nested_plots <- nested_data %>% #assigning the nested data to an object
+  mutate(plot = pmap(list(oil_concentration, fertilized, data), #creating individual objects to automatically generate plots from
+                     ~ ggplot() + #creating plots
+                       geom_col(data = ..3, aes(x = parameter, y = measure, fill = sample_id), colour = "black", position = "dodge") + #sequentially creating bar plots from the nested data
+                       labs(y = "Percent of total (%)") + #labelling the y-axis
+                       scale_x_discrete(limits = c("Naph",	"x2MNaph",	"x1MNaph",	"x16DMNaph",	"Acy",	"Ace",	"x235TMNaph",	"Fluor",	"DBThio",	"Phen",	"Ant",	"x2MDBThio",	"x2MPhen",	"x28DMDBThio",	"x24DMPhen",	"Pyr",	"x126TMPhen",	"x128TMPhen",	"x1MFlant",	"BePhen",	"BaAnt",	"Trip",	"Chry",	"x1MChry",	"x6EChry",	"BbFlant",	"BkFlant",	"BjFlant",	"BeP",	"BaP",	"Perl",	"DBahAnt",	"I123cdPyr",	"BghiPerl")) + #ordering the observations on the x-axis
+                       theme_minimal() + #assigning the tidyverse minimal theme to the plot
+                       scale_fill_viridis(discrete = TRUE) + #changing the colour palette 
+                       theme(axis.title.x = element_blank(), #removing the title from the x-axis
+                             axis.title.y = element_text(size = 14), #changing the size of the y-axis title
+                             axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.9), #changing the angle of the x-axis text
+                             axis.text = element_text(size = 14), #changing the overall size of axis text
+                             legend.title = element_blank(), #removing the title from the legend
+                             legend.text = element_text(size = 14), #setting the size of the legend text
+                             axis.ticks.x = element_line(size = 0.25), #changing the size of the x-axis tick marks
+                             panel.grid.major.x = element_blank(), #removing the panelling
+                             legend.position = "bottom")), #changing the position of the legend
+                    # labs(title = str_c(..1, ..2, ..3, "sediments", sep = ", "))), #sequentially assigning the titles for each plot
+         filename = str_c(oil_concentration, fertilized, "plot.png", sep = "_")) #assigning a filename to each plot
+nested_plots #calling the nested plots
+
+```
+
+
+
+```{r saving stand-alone plots}
+
+nested_plots_save <- nested_plots %>% #assigning the nested plots to an object
+  ungroup() %>% #must ungroup the nested data to save the individual files
+  select(filename, plot) %>% #choosing the parameters to save each file from
+  pwalk(ggsave, path =  here("figures"), width = 190, height = 220, units = "mm") #sequentially saving each plot based on the two above variables
+
+```
+

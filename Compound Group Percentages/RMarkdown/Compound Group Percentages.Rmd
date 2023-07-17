@@ -1,0 +1,68 @@
+---
+title: "Compound Group Percentages"
+author: "BH"
+date: "2023-05-24"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r loading packages}
+
+library(tidyverse)
+library(janitor)
+library(here)
+library(gt)
+library(broom) 
+library(fs)
+library(viridis)
+
+```
+
+
+```{r loading in dataset}
+
+group_data <- read_csv(here("data", "compound_group_percentages.csv")) %>%
+  clean_names() %>% 
+  rename(nC11_nC15 = nc11_nc15, nC16_nC26 = nc16_nc26, nC27_nC35 = nc27_nc35, PAHs = pahs, VOCs = vocs) %>% 
+  pivot_longer(cols = c(PAHs, nC11_nC15, nC16_nC26, nC27_nC35, pristane_phytane, VOCs, alkylbenzenes, alkylcycloalkanes), names_to = "parameter", values_to = "measure")
+
+```
+
+
+```{r creating the plot}
+
+group_plot <- group_data %>% #assigning the dataset to an object
+  mutate(across(treatment, factor, levels=c("5ppm FY","50ppm FN", "50ppm FY", "500ppm FY"))) %>% #separating the data by sample depth
+  mutate(across(parameter, factor, levels=c("alkylcycloalkanes", "alkylbenzenes", "VOCs", "pristane_phytane", "nC27_nC35", "nC16_nC26", "nC11_nC15", "PAHs"))) %>% #within each sample depth, separating by compound groups
+  ggplot() + #creating a ggplot
+  facet_wrap(~treatment, ncol = 4) + #making a two-window plot based on sample depth
+  geom_col(aes(x = sample_id, y = measure, fill = parameter), colour = "black", position = "fill") + #creating bar plots
+  labs(y = "Proportion of total") + #labelling the y-axis
+  scale_x_discrete(limits = c("T=0", "T=13", "T=End")) + #ordering the samples along the x-axis 
+  theme_minimal() + #using the tidyverse minimal theme
+ scale_fill_viridis(discrete = TRUE, option = "turbo") + #adding custom colour palette 
+  theme(axis.title.x = element_blank(), #removing the title from the x-axis
+        #axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.9), #changing the angle and position of x-axis text
+        legend.title = element_blank(), #removing the title from the legend
+        axis.ticks.x = element_line(linewidth = 0.25), #changing the size of the x-axis tick marks
+        panel.grid.major.x = element_blank()) #removing the panelling
+group_plot #calling the finished plot
+
+```
+
+
+```{r saving the plot}
+
+ggsave(here("Saved Files", "group_plot.pdf"), group_plot, #saving the plot as a pdf. file
+       width = 190, height = 120, units = "mm") #setting the plot size parameters
+
+ggsave(here("Saved Files", "group_plot.png"), group_plot, #saving the plot as a png. file
+       width = 190, height = 120, units = "mm") #setting the plot size parameters
+
+```

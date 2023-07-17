@@ -1,0 +1,95 @@
+---
+title: "One-way ANOVA & Post-Hoc tests"
+author: "BH"
+date: "2023-05-12"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r loading packages}
+
+#library(datarium)
+library(rstatix)
+library(tidyverse)
+library(janitor)
+library(here)
+
+```
+
+
+```{r loading dataset(s)}
+
+#In this package, datafiles (more specifically, .csv files) should be uploaded for each respective test to be performed (3 tests total). This is because each test requires the data to be presented in different formats. To limit the amount of code required to perform these tests, rather than manipulating data from a single dataset, uploading multiple variants of a single dataset is an easy alternative.
+
+#The code in this chunk is derived from the "Tidyverse." As such, the {tidyverse} package is required. To keep the data in accordance to the tidyverse, the {janitor} package is also required. 
+
+#The first test requires the data to be uploaded as a single column with a title in the first row.
+
+first_test_data <- read_csv(here("data", "first_test.csv")) %>%
+  clean_names()
+
+#The second test requires the data to be uploaded with columns for each variable being monitored (e.g. "T=0", "T=1week", "T=2weeks", etc..)
+
+second_test_data <- read_csv(here("data", "second_test.csv")) %>%
+  clean_names()
+
+#The third test requires the data to be uploaded as two columns: A "treatment" column (e.g. 5ppm, 50ppm, 500ppm, etc.) and an associated "result" column.
+
+third_test_data <- read_csv(here("data", "third_test.csv")) %>%
+  clean_names()
+
+```
+
+
+```{r Shapiro-Wilk test of normality}
+
+#This chunk is intended to test whether the data comes from a normally distributed population. This will dictate the type of statistical tests that follow.
+#The test to be performed herein is called the Shapiro-Wilk test of normality. To perform this test in R, the dataset should be uploaded as a single column with a title in the first row.
+
+shapiro.test(first_test_data$results)
+
+#Make sure to either write down the results below, or take a screenshot and add it to the "Saved Files" folder.
+
+```
+
+
+
+```{r one-way tests}
+
+#In this chunk, the one-way test being used depends on the results of the Shapiro-Wilk test. If the data is normally distributed, perform a one-way ANOVA. If the data is NOT normally distributed, perform a Kruskal-Wallis test.
+
+#The one-way tests will determine whether or not a statistically significant difference exists somewhere within the dataset. It won't tell you where the difference is (if one exists), but a post-hoc test can be performed afterwards to examine this.
+
+#To perform a Kruskal-Wallis test, typically the data needs to be ranked however, R will do this on its own. The dataset should be uploaded with columns for each variable being monitored (e.g. "T=0", "T=1week", "T=2weeks", etc..)
+
+kruskal.test(second_test_data)
+
+#Make sure to either write down the results below, or take a screenshot and add it to the "Saved Files" folder.
+
+```
+
+
+
+```{r Post-Hoc tests}
+
+#The post-hoc tests are intended to expose where the statistically significant differences lie within the dataset.
+
+#If the dataset is NOT normally distributed and the Kruskal-Wallis test confirmed the presence of a statistically significant difference, the appropriate post-hoc test to perform is the Dunn test. This test requires the {rstatix} package. 
+
+#When performing a post-hoc test, many independent tests are being performed simultaneously, which can run the risk of increasing the likelihood of false positive/type 1 errors. As such, a correction must be added in order to mitigate this issue. This correction comes in the form of adjusting the p-values from the individual tests. One of the most common methods to do this is the "Bonferroni correction."
+
+#To perform a Dunn test, the data must be uploaded as two columns: A "treatment" column (e.g. 5ppm, 50ppm, 500ppm, etc.) and an associated "result" column.
+
+dunn_test_results <- dunn_test(third_test_data, result~treatment, p.adjust.method = "bonferroni") %>%
+  write_csv(here("Saved Files", "dunn_test_results.csv"))
+
+dunn_test_results
+
+```
+
